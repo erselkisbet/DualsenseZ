@@ -14,6 +14,8 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 # Debug symbols, linker leftovers, logs and the test-only string map stay out of the package.
 robocopy $output $stage /E /XF *.pdb *.ilk *.exp *.lib *.log *.dsy winui-map.json /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "Copy failed (robocopy $LASTEXITCODE)." }
+# robocopy reports success as 1-7; clear it so the script itself does not exit with that code.
+$global:LASTEXITCODE = 0
 Copy-Item (Join-Path $root 'LICENSE'), (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination $stage
 $zip = Join-Path $dist "$name.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
