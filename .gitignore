@@ -1,0 +1,24 @@
+# Derleme çıktıları
+/build/
+/out/
+/dist/
+/winui/bin/
+/winui/obj/
+/winui/packages/
+
+# Yerel araçlar (cmake, ninja)
+/.tools/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Loglar ve üretilen dosyalar
+*.log
+*.binlog
+core-boundary-profile.dsy
+__pycache__/
+*.pyc

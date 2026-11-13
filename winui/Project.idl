@@ -1,0 +1,9 @@
+namespace DualsenseZNative
+{
+    [default_interface] runtimeclass MainWindow : Microsoft.UI.Xaml.Window { MainWindow(); }
+    [default_interface] runtimeclass OverviewPage : Microsoft.UI.Xaml.Controls.Page { OverviewPage(); }
+    [default_interface] runtimeclass ControllerPage : Microsoft.UI.Xaml.Controls.Page { ControllerPage(); }
+    [default_interface] runtimeclass SettingsPage : Microsoft.UI.Xaml.Controls.Page { SettingsPage(); }
+    [default_interface] runtimeclass FeaturePage : Microsoft.UI.Xaml.Controls.Page { FeaturePage(); }
+}
+

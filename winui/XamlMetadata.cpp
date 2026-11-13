@@ -1,0 +1,11 @@
+#include "pch.h"
+#include "MainWindow.xaml.h"
+#include "Pages/OverviewPage.xaml.h"
+#include "Pages/SettingsPage.xaml.h"
+#include "Pages/ControllerPage.xaml.h"
+#include "Pages/FeaturePage.xaml.h"
+#include "XamlMetaDataProvider.h"
+#include "XamlTypeInfo.g.cpp"
+#include "XamlTypeInfo.Impl.g.cpp"
+#include "XamlMetaDataProvider.g.cpp"
+

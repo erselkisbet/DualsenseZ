@@ -1,0 +1,20 @@
+<Application x:Class="DualsenseZNative.App"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <Application.Resources><ResourceDictionary>
+  <ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" /></ResourceDictionary.MergedDictionaries>
+  <Color x:Key="SystemAccentColor">#2389F5</Color>
+  <Color x:Key="SystemAccentColorLight1">#60AEFF</Color>
+  <Color x:Key="SystemAccentColorLight2">#96C9FF</Color>
+  <Color x:Key="SystemAccentColorLight3">#C8E3FF</Color>
+  <Color x:Key="SystemAccentColorDark1">#176BC8</Color>
+  <Color x:Key="SystemAccentColorDark2">#124F96</Color>
+  <Color x:Key="SystemAccentColorDark3">#102F58</Color>
+  <Style x:Key="Card" TargetType="Border">
+   <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+   <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+   <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/>
+   <Setter Property="Padding" Value="24"/>
+  </Style>
+ </ResourceDictionary></Application.Resources>
+</Application>

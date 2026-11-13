@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AC316F21-2907-4D9C-8958-8F35DC8A80F1}</ProjectGuid>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture><RootNamespace>DualsenseZNative</RootNamespace><ProjectName>DualsenseZ.WinUI</ProjectName>
+    <TargetName>DualsenseZ</TargetName><DefaultLanguage>en-US</DefaultLanguage>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
+    <TargetPlatformVersion>10.0.22621.0</TargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.22000.0</WindowsTargetPlatformMinVersion>
+    <!-- Desktop host: no UWP/Store toolset dependency. -->
+    <AppContainerApplication>false</AppContainerApplication><UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType><AppxPackage>false</AppxPackage>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <CppWinRTOptimized>true</CppWinRTOptimized><CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+    <MinimalCoreWin>true</MinimalCoreWin><EnableMsixTooling>true</EnableMsixTooling>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle><NuGetTargetMoniker>native,Version=v0.0</NuGetTargetMoniker>
+    <NuGetTargetPlatformIdentifier>Windows</NuGetTargetPlatformIdentifier><NuGetTargetPlatformVersion>$(WindowsTargetPlatformVersion)</NuGetTargetPlatformVersion>
+    <RestorePackagesPath>$(MSBuildThisFileDirectory)packages</RestorePackagesPath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration"><ConfigurationType>Application</ConfigurationType><PlatformToolset>v143</PlatformToolset><CharacterSet>Unicode</CharacterSet><UseDebugLibraries>false</UseDebugLibraries><DesktopCompatible>true</DesktopCompatible></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><OutDir>$(MSBuildThisFileDirectory)bin\$(Platform)\$(Configuration)\</OutDir><IntDir>$(MSBuildThisFileDirectory)obj\$(Platform)\$(Configuration)\</IntDir><AppxPriInitialPath></AppxPriInitialPath></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.Windows.CppWinRT" Version="2.0.250303.1" />
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><LanguageStandard>stdcpp20</LanguageStandard><PrecompiledHeader>Use</PrecompiledHeader><PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile><PrecompiledHeaderOutputFile>$(IntDir)DualsenseZ.x64.pch</PrecompiledHeaderOutputFile><AdditionalIncludeDirectories>$(IntDir);$(IntDir)Pages;$(ProjectDir);$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary><AdditionalOptions>/utf-8 /bigobj %(AdditionalOptions)</AdditionalOptions><WarningLevel>Level3</WarningLevel></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><AdditionalDependencies>shell32.lib;comctl32.lib;dwmapi.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+    <Manifest><AdditionalManifestFiles>$(ProjectDir)app.manifest;%(AdditionalManifestFiles)</AdditionalManifestFiles></Manifest>
+  </ItemDefinitionGroup>
+  <Import Project="..\build\DualsenseCore.props" Condition="Exists('..\build\DualsenseCore.props')" />
+  <ItemGroup><ApplicationDefinition Include="App.xaml" /><Page Include="MainWindow.xaml" /><Page Include="Pages\OverviewPage.xaml" /><Page Include="Pages\ControllerPage.xaml" /><Page Include="Pages\SettingsPage.xaml" /><Page Include="Pages\FeaturePage.xaml" /></ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\dsai.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Assets\dsimg.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Assets\TitleBarLogo.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+  </ItemGroup>
+  <ItemGroup><ResourceCompile Include="Branding.rc" /><ClInclude Include="resource.h" /></ItemGroup>
+  <ItemGroup><None Include="Assets\AppIcon.png" /><None Include="Assets\AppIcon.ico" /><None Include="Assets\TitleBarLogo.ico" /><None Include="Assets\TitleBarLogoOnLight.png" /><None Include="Assets\TitleBarLogoOnLight.ico" /></ItemGroup>
+  <ItemGroup><Midl Include="Project.idl" /></ItemGroup>
+  <ItemGroup><ClInclude Include="pch.h" /><ClInclude Include="App.xaml.h" /><ClInclude Include="MainWindow.xaml.h" /><ClInclude Include="Pages\OverviewPage.xaml.h" /><ClInclude Include="Pages\ControllerPage.xaml.h" /><ClInclude Include="Pages\SettingsPage.xaml.h" /><ClInclude Include="Pages\FeaturePage.xaml.h" /><ClInclude Include="Pages\ControllerPageHeader.h" /><ClInclude Include="Services\CoreHost.h" /><ClInclude Include="Services\Notifications.h" /></ItemGroup>
+  <ItemGroup><ClCompile Include="XamlMetadata.cpp" /><ClCompile Include="pch.cpp"><PrecompiledHeader>Create</PrecompiledHeader></ClCompile><ClCompile Include="App.xaml.cpp" /><ClCompile Include="MainWindow.xaml.cpp" /><ClCompile Include="Pages\OverviewPage.xaml.cpp" /><ClCompile Include="Pages\ControllerPage.xaml.cpp" /><ClCompile Include="Pages\SettingsPage.xaml.cpp" /><ClCompile Include="Pages\FeaturePage.xaml.cpp" /><ClCompile Include="Services\CoreHost.cpp" /><ClCompile Include="$(GeneratedFilesDir)module.g.cpp" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CompileDesktopXaml" BeforeTargets="ClCompile" DependsOnTargets="CppWinRTMakeProjections;MarkupCompilePass1;MarkupCompilePass2" />
+</Project>
+
+
+

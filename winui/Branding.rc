@@ -1,0 +1,4 @@
+#include "resource.h"
+IDI_DUALSENSEZ ICON "Assets\\AppIcon.ico"
+IDI_DUALSENSEZ_TITLEBAR ICON "Assets\\TitleBarLogo.ico"
+IDI_DUALSENSEZ_TITLEBAR_ON_LIGHT ICON "Assets\\TitleBarLogoOnLight.ico"

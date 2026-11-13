@@ -1,0 +1,25 @@
+<Window x:Class="DualsenseZNative.MainWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="DualsenseZ">
+ <Grid x:Name="Root">
+  <Grid.Resources><Style x:Key="NavigationMenuIconStyle" TargetType="FontIcon"><Setter Property="FontFamily" Value="{ThemeResource SymbolThemeFontFamily}"/><Setter Property="FontSize" Value="20"/></Style><Storyboard x:Key="NotificationFadeIn"><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.16"/></Storyboard></Grid.Resources>
+  <NavigationView x:Name="Navigation" PaneDisplayMode="Auto" IsBackButtonVisible="Collapsed" IsSettingsVisible="True" SelectionChanged="Navigate">
+   <NavigationView.MenuItems>
+    <NavigationViewItem Content="@Overview@" Tag="Overview" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItemSeparator/>
+    <NavigationViewItem Content="@Controller@" Tag="Controller" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE7FC;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItem Content="@WinUI.AdaptiveTriggers@" Tag="Adaptive Triggers" ><NavigationViewItem.Icon><FontIcon Glyph="&#xEC4A;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItem Content="@WinUI.SoundHaptics@" Tag="Sound &amp; Haptics" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE9E9;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItem Content="@Lighting@" Tag="Lighting" ><NavigationViewItem.Icon><FontIcon Glyph="&#xEA80;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItem Content="@WinUI.MotionTouch@" Tag="Motion &amp; Touch" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE815;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+    <NavigationViewItemSeparator/>
+    <NavigationViewItem Content="@Diagnostics@" Tag="Diagnostics" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
+   </NavigationView.MenuItems>
+   <Grid Padding="24,16,24,24" RowSpacing="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <InfoBar x:Name="StatusBar" IsOpen="True" IsClosable="False" Severity="Informational" Title="@WinUI.StartingDualsenseZ@" Message="@WinUI.ConnectingToTheControllerRuntime@"/>
+    <Frame x:Name="ContentFrame" Grid.Row="1" CacheSize="3"/>
+   </Grid>
+  </NavigationView>
+  <InfoBar x:Name="NotificationPopup" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="24" MinWidth="0" MaxWidth="560" Padding="12,8,12,8" CornerRadius="8" IsOpen="False" Visibility="Collapsed" IsClosable="True" AutomationProperties.LiveSetting="Polite"/>
+ </Grid>
+</Window>
