@@ -41,7 +41,7 @@ Download the latest zip from the [Releases page](https://github.com/erselkisbet/
 
 ## Build
 
-You need Visual Studio 2022 C++ Build Tools, Windows SDK 10.0.22621.0, CMake and Ninja. From the repository root, in PowerShell:
+You need Visual Studio 2022 (or newer) C++ Build Tools, a Windows 11 SDK (10.0.22621.0 or newer), CMake and Ninja. From the repository root, in PowerShell:
 
 ```powershell
 .\scripts\build-winui.ps1

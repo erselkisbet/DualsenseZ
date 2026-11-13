@@ -41,7 +41,7 @@ DualsenseZ, [WujekFoliarz/DualSenseY-v2](https://github.com/WujekFoliarz/DualSen
 
 ## Derleme
 
-Visual Studio 2022 C++ Build Tools, Windows SDK 10.0.22621.0, CMake ve Ninja gerekir. Depo kökünde PowerShell ile:
+Visual Studio 2022 (veya daha yeni) C++ Build Tools, bir Windows 11 SDK (10.0.22621.0 veya daha yeni), CMake ve Ninja gerekir. Depo kökünde PowerShell ile:
 
 ```powershell
 .\scripts\build-winui.ps1
