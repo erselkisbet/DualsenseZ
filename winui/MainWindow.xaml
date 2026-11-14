@@ -16,7 +16,8 @@
     <NavigationViewItem Content="@Diagnostics@" Tag="Diagnostics" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
    </NavigationView.MenuItems>
    <Grid Padding="24,16,24,24" RowSpacing="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <InfoBar x:Name="StatusBar" IsOpen="True" IsClosable="False" Severity="Informational" Title="@WinUI.StartingDualsenseZ@" Message="@WinUI.ConnectingToTheControllerRuntime@"/>
+    <StackPanel Spacing="8"><InfoBar x:Name="StatusBar" IsOpen="True" IsClosable="False" Severity="Informational" Title="@WinUI.StartingDualsenseZ@" Message="@WinUI.ConnectingToTheControllerRuntime@"/>
+     <InfoBar x:Name="UpdateBar" IsOpen="False" IsClosable="True" Severity="Informational"><InfoBar.ActionButton><HyperlinkButton x:Name="UpdateLink"/></InfoBar.ActionButton></InfoBar></StackPanel>
     <Frame x:Name="ContentFrame" Grid.Row="1" CacheSize="3"/>
    </Grid>
   </NavigationView>

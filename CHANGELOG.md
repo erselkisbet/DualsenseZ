@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Update notice: on launch the app checks GitHub for a newer release and shows a link to its download page. It can be turned off in Settings; nothing is downloaded automatically.
+
 ## 1.0.0-beta.1
 
 First public beta. DualsenseZ starts from [DualSenseY-v2](https://github.com/WujekFoliarz/DualSenseY-v2) and replaces its ImGui interface with a native WinUI 3 one.

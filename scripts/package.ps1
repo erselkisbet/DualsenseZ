@@ -5,7 +5,10 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $output = Join-Path $root 'winui\bin\x64\Release'
 if (!(Test-Path (Join-Path $output 'DualsenseZ.exe'))) { throw 'DualsenseZ.exe not found. Run scripts\build-winui.ps1 first.' }
-if (!$Version) { $Version = (Get-Content (Join-Path $root 'resources\translations\en.json') -Raw | ConvertFrom-Json).'WinUI.SettingsAppVersionValue' }
+if (!$Version) {
+    if ((Get-Content (Join-Path $root 'include\applicationVersion.hpp') -Raw) -notmatch 'g_AppVersionName\[\]\s*=\s*"([^"]+)"') { throw 'Version name not found in include\applicationVersion.hpp.' }
+    $Version = $Matches[1]
+}
 $name = "DualsenseZ-$Version-win-x64"
 $dist = Join-Path $root 'dist'
 $stage = Join-Path $dist $name

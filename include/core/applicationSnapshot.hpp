@@ -17,6 +17,7 @@ struct ApplicationPreferences {
     bool disconnectBluetoothOnExit = false;
     bool hideToTrayOnClose = false;
     bool startWithWindows = false;
+    bool checkForUpdates = true;
 };
 struct TriggerSnapshot {
     std::string format;

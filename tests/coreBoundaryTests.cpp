@@ -3,6 +3,7 @@
 #include "core/uiText.hpp"
 #include "core/batteryLightbar.hpp"
 #include "core/lightingLevels.hpp"
+#include "core/updateCheck.hpp"
 #include <atomic>
 #include <thread>
 #include <iostream>
@@ -32,6 +33,11 @@ int main(int argc,char** argv) {
     SettingsFileGuard settingsFile("Config.json"),sessionFile("Session.json");
     try {
         TestWorkerExchange();
+        Check(UpdateCheck::IsNewer("v1.0.0-beta.2","1.0.0-beta.1")&&!UpdateCheck::IsNewer("1.0.0-beta.1","1.0.0-beta.1"),"newer pre-release detected");
+        Check(UpdateCheck::IsNewer("1.0.0","1.0.0-beta.9")&&!UpdateCheck::IsNewer("1.0.0-beta.9","1.0.0"),"final release outranks its pre-releases");
+        Check(UpdateCheck::IsNewer("1.0.0-beta.10","1.0.0-beta.9")&&UpdateCheck::IsNewer("1.0.0-beta.1","1.0.0-alpha.7")&&UpdateCheck::IsNewer("1.10.0","1.9.5"),"numeric version ordering");
+        Check(!UpdateCheck::IsNewer("latest","1.0.0")&&!UpdateCheck::IsNewer("1.0","x")&&!UpdateCheck::Parse("1.2.3.4").valid&&!UpdateCheck::Parse("1..2").valid,"malformed versions ignored");
+        Check(UpdateCheck::Offered("1.0.0-beta.2","1.0.0-beta.1")&&!UpdateCheck::Offered("1.1.0-beta.1","1.0.0")&&UpdateCheck::Offered("1.1.0","1.0.0"),"pre-releases offered only to pre-release users");
         Check(BatteryBandForPercent(-1)==BatteryLightbarBand::Unavailable,"unknown battery stays unknown");
         Check(BatteryBandForPercent(0)==BatteryLightbarBand::Red && BatteryBandForPercent(29)==BatteryLightbarBand::Red,"red battery threshold");
         Check(BatteryBandForPercent(30)==BatteryLightbarBand::Yellow && BatteryBandForPercent(69)==BatteryLightbarBand::Yellow,"yellow battery threshold");

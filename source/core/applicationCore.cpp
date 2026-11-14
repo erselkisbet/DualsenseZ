@@ -18,7 +18,7 @@ namespace {
 bool ValidSlot(int index) { return index >= 0 && index < 4; }
 ApplicationPreferences Preferences(const AppSettings& s) {
     return {s.SelectedLanguage,s.HideToTrayOnMinimize,s.HideToTrayOnStart,
-        s.DisableAllBluetoothControllersOnExit,s.HideToTrayOnClose,s.StartWithWindows};
+        s.DisableAllBluetoothControllersOnExit,s.HideToTrayOnClose,s.StartWithWindows,s.CheckForUpdates};
 }
 }
 struct ApplicationCore::Impl {
@@ -287,7 +287,7 @@ ApplicationCore::RequestId ApplicationCore::SetPreferences(ApplicationPreference
         auto& s=r.Settings(); const bool languageChanged=s.SelectedLanguage!=p.language;
         s.SelectedLanguage=p.language;s.HideToTrayOnMinimize=p.hideToTrayOnMinimize;
         s.HideToTrayOnStart=p.hideToTrayOnStart;s.DisableAllBluetoothControllersOnExit=p.disconnectBluetoothOnExit;
-        s.HideToTrayOnClose=p.hideToTrayOnClose;
+        s.HideToTrayOnClose=p.hideToTrayOnClose;s.CheckForUpdates=p.checkForUpdates;
         SaveAppSettings(&s);
         if(languageChanged) r.Translations().ReadStringsFromJson(CountryCodeToFile(p.language));
 #ifdef WINDOWS

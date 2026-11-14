@@ -32,6 +32,8 @@ private:
     void CloseHost();
     void UpdateTitleTheme();
     void UpdateWindowIcons(UINT dpi);
+    winrt::fire_and_forget CheckForUpdate();
+    void ShowUpdate(std::string const& version,winrt::hstring const& page);
     static LRESULT CALLBACK WindowProc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
     std::shared_ptr<CoreHost> m_host;
     Microsoft::UI::Dispatching::DispatcherQueueTimer m_timer{nullptr};
@@ -39,7 +41,7 @@ private:
     CoreHost::State m_lastState=CoreHost::State::Starting;
     HWND m_hwnd=nullptr;
     HICON m_appIcon=nullptr,m_titleIcon=nullptr;
-    bool m_closed=false,m_hideOnMinimize=false,m_hideOnClose=false,m_exitRequested=false,m_startBehaviorApplied=false,m_trayAdded=false;
+    bool m_closed=false,m_hideOnMinimize=false,m_hideOnClose=false,m_exitRequested=false,m_startBehaviorApplied=false,m_trayAdded=false,m_updateChecked=false;
     Microsoft::UI::Xaml::Controls::Page m_settingsPage{nullptr};
 };
 }

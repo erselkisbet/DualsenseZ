@@ -14,6 +14,11 @@
 #include "resource.h"
 #include <algorithm>
 #include <winrt/Microsoft.UI.Xaml.Media.Animation.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Windows.Data.Json.h>
+#include "applicationVersion.hpp"
+#include "core/updateCheck.hpp"
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -184,6 +189,37 @@ void MainWindow::NotifyCompleted(ApplicationCore::CommandResult const& result) {
         ShowNotification(specific?to_hstring(result.messageKey):pending->success,pending->severity);
     }
 }
+// Asks GitHub for the published releases and offers the newest one that is newer than this build.
+// Nothing is downloaded or installed; a failed or offline check stays silent.
+winrt::fire_and_forget MainWindow::CheckForUpdate() {
+    const auto weak=get_weak();const auto queue=DispatcherQueue();
+    try {
+        co_await winrt::resume_background();
+        Windows::Web::Http::HttpClient client;
+        client.DefaultRequestHeaders().UserAgent().TryParseAdd(L"DualsenseZ");
+        client.DefaultRequestHeaders().Accept().TryParseAdd(L"application/vnd.github+json");
+        const auto body=co_await client.GetStringAsync(Windows::Foundation::Uri(L"https://api.github.com/repos/erselkisbet/DualsenseZ/releases?per_page=20"));
+        std::string newest;hstring page;
+        for(auto const& item:Windows::Data::Json::JsonArray::Parse(body)) {
+            const auto release=item.GetObject();
+            if(release.GetNamedBoolean(L"draft",false))continue;
+            const auto tag=to_string(release.GetNamedString(L"tag_name",L""));
+            if(UpdateCheck::Offered(tag,g_AppVersionName)&&(newest.empty()||UpdateCheck::IsNewer(tag,newest))){newest=tag;page=release.GetNamedString(L"html_url",L"");}
+        }
+        if(newest.empty())co_return;
+        // The link comes from the network: only ever open this project's own release pages.
+        const std::wstring_view releases=L"https://github.com/erselkisbet/DualsenseZ/releases";
+        if(std::wstring_view(page).substr(0,releases.size())!=releases)page=releases;
+        queue.TryEnqueue([weak,newest,page]{if(auto self=weak.get();self&&!self->m_closed)self->ShowUpdate(newest,page);});
+    } catch(...) {}
+}
+void MainWindow::ShowUpdate(std::string const& version,hstring const& page) {
+    const auto name=!version.empty()&&(version[0]=='v'||version[0]=='V')?version.substr(1):version;
+    NativeLocalization::SetInfo(UpdateBar(),L"@WinUI.UpdateAvailable@",to_hstring("DualsenseZ "+name+" @WinUI.UpdateAvailableMessage@"));
+    UpdateLink().Content(box_value(NativeLocalization::Text(L"@WinUI.DownloadUpdate@")));
+    UpdateLink().NavigateUri(Windows::Foundation::Uri(page));
+    UpdateBar().IsOpen(true);
+}
 void MainWindow::Refresh() {
     if(!m_host||m_closed)return;
     if(m_startBehaviorApplied&&!IsWindowVisible(m_hwnd))return;
@@ -209,6 +245,8 @@ void MainWindow::Refresh() {
     }
     Root().FlowDirection(snapshot->preferences.language=="ar"?FlowDirection::RightToLeft:FlowDirection::LeftToRight);
     m_hideOnMinimize=snapshot->preferences.hideToTrayOnMinimize;m_hideOnClose=snapshot->preferences.hideToTrayOnClose;
+    // One look at GitHub per launch, and only when the user has left the option on.
+    if(snapshot->running&&!m_updateChecked){m_updateChecked=true;if(snapshot->preferences.checkForUpdates)CheckForUpdate();}
     if(snapshot->running&&!m_startBehaviorApplied){m_startBehaviorApplied=true;if(snapshot->preferences.hideToTrayOnStart&&m_trayAdded){ShowWindow(m_hwnd,SW_HIDE);VisibilityChanged(false);}else ShowFromTray();}
     if(m_startBehaviorApplied&&!IsWindowVisible(m_hwnd))return;
     if(auto feature=content.try_as<DualsenseZNative::FeaturePage>())get_self<FeaturePage>(feature)->Update(*snapshot);

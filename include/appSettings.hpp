@@ -15,6 +15,7 @@ struct AppSettings {
 	bool HideToTrayOnMinimize = false;
 	bool HideToTrayOnStart = false;
 	bool HideToTrayOnClose = false;
+	bool CheckForUpdates = true;
 	bool StartWithWindows = false; // Mirrors the registry Run entry; deliberately not saved to the config file.
 	uint16_t LocalPort = 6969;
 	nlohmann::json LightingPreferences = nlohmann::json::array();
@@ -27,6 +28,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
 	HideToTrayOnMinimize,
 	HideToTrayOnStart,
 	HideToTrayOnClose,
+	CheckForUpdates,
 	LocalPort,
 	LightingPreferences
 );

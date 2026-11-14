@@ -2,6 +2,8 @@
 #include "Services/Localization.h"
 #include "SettingsPage.xaml.h"
 #include "ResponsivePageLayout.h"
+#include "applicationVersion.hpp"
+#include "core/updateCheck.hpp"
 #include "SettingsPage.xaml.g.hpp"
 #if __has_include("SettingsPage.g.cpp")
 #include "SettingsPage.g.cpp"
@@ -12,6 +14,8 @@ using namespace Microsoft::UI::Xaml::Controls;
 namespace winrt::DualsenseZNative::implementation {
 SettingsPage::SettingsPage() {
     InitializeComponent();NavigationCacheMode(Navigation::NavigationCacheMode::Required);
+    AppVersion().Text(to_hstring(g_AppVersionName));
+    PrereleaseBadge().Visibility(UpdateCheck::Parse(g_AppVersionName).prerelease.empty()?Visibility::Collapsed:Visibility::Visible);
     ResponsivePageLayout::Attach(ComponentsLayout(),1,1,600);
     ComponentsLayout().SizeChanged([](auto const& sender,SizeChangedEventArgs const& args){sender.as<Grid>().RowSpacing(args.NewSize().Width<600?12:0);});
     ResponsivePageLayout::Attach(AboutLayout(),2,1,680);
@@ -21,7 +25,7 @@ SettingsPage::SettingsPage() {
         AboutDivider().Visibility(narrow?Visibility::Collapsed:Visibility::Visible);
         VersionDetails().Margin(narrow?Thickness{0,0,0,0}:Thickness{20,0,0,0});
     });
-    for(auto const& row:{LanguageRow(),DisconnectBluetoothRow(),TrayRow(),TrayStartupRow(),StartWithWindowsRow(),AssociateRow()}) {
+    for(auto const& row:{LanguageRow(),DisconnectBluetoothRow(),TrayRow(),TrayStartupRow(),StartWithWindowsRow(),UpdateCheckRow(),AssociateRow()}) {
         row.SizeChanged([](auto const& sender,SizeChangedEventArgs const& args){
             auto layout=sender.as<Grid>();auto control=layout.Children().GetAt(2).as<FrameworkElement>();
             const bool narrow=args.NewSize().Width<420;
@@ -31,7 +35,7 @@ SettingsPage::SettingsPage() {
     }
 }
 void SettingsPage::Update(ApplicationSnapshot const& s) {
-    Language().IsEnabled(s.running);DisconnectBluetooth().IsEnabled(s.running);TrayMode().IsEnabled(s.running);TrayStartup().IsEnabled(s.running);StartWithWindows().IsEnabled(s.running);Associate().IsEnabled(s.running);
+    Language().IsEnabled(s.running);DisconnectBluetooth().IsEnabled(s.running);TrayMode().IsEnabled(s.running);TrayStartup().IsEnabled(s.running);StartWithWindows().IsEnabled(s.running);UpdateCheck().IsEnabled(s.running);Associate().IsEnabled(s.running);
     ViGEmStatus().Text(NativeLocalization::Text(s.emulationAvailable?L"@WinUI.ComponentAvailable@":L"@WinUI.ComponentUnavailable@"));
     HidHideStatus().Text(NativeLocalization::Text(s.hidingAvailable?L"@WinUI.ComponentAvailable@":L"@WinUI.HidHideAndAdministratorModeRequired@"));
     if(m_pending)return;
@@ -46,6 +50,7 @@ void SettingsPage::Update(ApplicationSnapshot const& s) {
     if(TrayMode().SelectedIndex()!=trayMode)TrayMode().SelectedIndex(trayMode);
     if(TrayStartup().IsOn()!=m_draft.hideToTrayOnStart)TrayStartup().IsOn(m_draft.hideToTrayOnStart);
     if(StartWithWindows().IsOn()!=m_draft.startWithWindows)StartWithWindows().IsOn(m_draft.startWithWindows);
+    if(UpdateCheck().IsOn()!=m_draft.checkForUpdates)UpdateCheck().IsOn(m_draft.checkForUpdates);
     m_updating=false;
 }
 void SettingsPage::Submit() {
@@ -71,7 +76,7 @@ void SettingsPage::TrayModeChanged(Windows::Foundation::IInspectable const&,Sele
 }
 void SettingsPage::PreferencesChanged(Windows::Foundation::IInspectable const&,RoutedEventArgs const&) {
     if(NativeLocalization::applying||m_updating)return;
-    m_draft.hideToTrayOnStart=TrayStartup().IsOn();m_draft.startWithWindows=StartWithWindows().IsOn();
+    m_draft.hideToTrayOnStart=TrayStartup().IsOn();m_draft.startWithWindows=StartWithWindows().IsOn();m_draft.checkForUpdates=UpdateCheck().IsOn();
     m_draft.disconnectBluetoothOnExit=DisconnectBluetooth().IsOn();Submit();
 }
 }
