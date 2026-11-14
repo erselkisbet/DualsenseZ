@@ -42,7 +42,7 @@ public:
     RequestId RemoveDefaultProfile(int index);
     RequestId SetPreferences(ApplicationPreferences preferences);
     // Game profiles: match is the game's executable or its install folder ending in a slash.
-    RequestId AddGameProfile(std::string name,std::string match,int steamAppId);
+    RequestId AddGameProfile(std::string name,std::string match,int steamAppId,bool activate=false);
     RequestId RemoveGameProfile(std::string id);
     RequestId SetGameCover(std::string id,std::string cover);
     RequestId SetGameAutoSwitch(bool enabled);

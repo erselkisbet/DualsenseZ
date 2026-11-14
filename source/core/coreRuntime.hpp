@@ -7,6 +7,7 @@
 #include "udp.hpp"
 #include "keyboardMouseMapper.hpp"
 #include <memory>
+#include <future>
 #include "core/workerExchange.hpp"
 #include "core/gameProfiles.hpp"
 
@@ -46,6 +47,9 @@ public:
     void SetGameCover(const std::string& id,std::string cover);
     void SetGameAutoSwitch(bool enabled);
     void ToggleGame(const std::string& id);
+    void ApplyGame(const std::string& id,bool manual);
+    // A running game from an installed library that has no profile yet, or null.
+    const std::shared_ptr<const InstalledGame>& SuggestedGame() const { return m_Suggestion; }
 private:
     void Synchronize();
     void LoadGames();
@@ -80,5 +84,8 @@ private:
     s_scePadSettings m_BeforeGame{}; // the user's own settings while a game's profile is active
     int m_GameSlot=0;
     bool m_GameManual=false, m_GameAutoSwitch=true;
-    std::chrono::steady_clock::time_point m_NextGameScan{};
+    std::chrono::steady_clock::time_point m_NextGameScan{}, m_NextLibraryScan{};
+    std::vector<InstalledGame> m_Library;
+    std::future<std::vector<InstalledGame>> m_LibraryScan;
+    std::shared_ptr<const InstalledGame> m_Suggestion;
 };

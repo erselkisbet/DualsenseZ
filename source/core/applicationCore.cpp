@@ -80,7 +80,7 @@ struct ApplicationCore::Impl {
         s->selectedController=runtime.SelectedController();
         s->preferences=Preferences(runtime.Settings());
         s->hidingAvailable=runtime.HidingAvailable();
-        s->games=runtime.GameList();s->activeGame=runtime.ActiveGame();s->gameAutoSwitch=runtime.GameAutoSwitch();
+        s->games=runtime.GameList();s->activeGame=runtime.ActiveGame();s->gameAutoSwitch=runtime.GameAutoSwitch();s->suggestedGame=runtime.SuggestedGame();
         if(running) {
             s->emulationAvailable=runtime.Emulation().IsVigemConnected();
             s->udpActive=runtime.ModConnection().IsActive();
@@ -343,9 +343,13 @@ ApplicationCore::RequestId ApplicationCore::SetTrigger(int i,int side,bool dsx,i
         if(side==0)s.isLeftUsingDsxTrigger=dsx;else s.isRightUsingDsxTrigger=dsx;
         ApplyTriggerParameters(s);return std::string{};});
 }
-ApplicationCore::RequestId ApplicationCore::AddGameProfile(std::string name,std::string match,int steamAppId) {
+ApplicationCore::RequestId ApplicationCore::AddGameProfile(std::string name,std::string match,int steamAppId,bool activate) {
     if(name.empty()||match.empty()||steamAppId<0) return 0;
-    return m_Impl->Enqueue([name=std::move(name),match=std::move(match),steamAppId](CoreRuntime& r){r.AddGame(name,match,steamAppId);return std::string("GameProfileAdded");});
+    return m_Impl->Enqueue([name=std::move(name),match=std::move(match),steamAppId,activate](CoreRuntime& r){
+        const auto id=r.AddGame(name,match,steamAppId);
+        // Added while the game is running: use it right away. With automatic switching it ends with the game; otherwise it stays until changed.
+        if(activate)r.ApplyGame(id,!r.GameAutoSwitch());
+        return std::string("GameProfileAdded");});
 }
 ApplicationCore::RequestId ApplicationCore::RemoveGameProfile(std::string id) {
     if(id.empty()) return 0;

@@ -48,6 +48,7 @@ private:
     void Profiles(std::shared_ptr<View> const&);
     Microsoft::UI::Xaml::FrameworkElement GameCard(GameProfileEntry const&,bool active,bool enabled);
     Microsoft::UI::Xaml::FrameworkElement AddGameCard(bool enabled);
+    Microsoft::UI::Xaml::FrameworkElement SuggestionCard(InstalledGame const&,bool enabled);
     winrt::fire_and_forget PickProfile(int operation);
     winrt::fire_and_forget AddGameDialog();
     winrt::fire_and_forget FetchCover(GameProfileEntry game);

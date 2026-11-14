@@ -16,10 +16,13 @@ struct InstalledGame {
     std::string name;
     std::string folder;  // install folder ending in a slash
     int steamAppId = 0;
+    std::string source;  // launcher the game was found in: Steam, Epic Games, EA or Xbox
 };
 namespace GameLibrary {
 // Games in the local Steam libraries, sorted by name. Reads Steam's own files; no network.
 std::vector<InstalledGame> InstalledSteamGames();
+// Every game found in the Steam, Epic Games, EA and Xbox libraries, sorted by name. Local files and registry only.
+std::vector<InstalledGame> InstalledGames();
 // The portrait cover Steam already keeps on disk for a game, or an empty string.
 std::string SteamCover(int appId);
 // A readable name for an executable: its product name, else its file name.

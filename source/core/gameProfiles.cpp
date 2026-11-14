@@ -98,7 +98,7 @@ std::vector<InstalledGame> InstalledSteamGames() {
                 if(std::find(seen.begin(),seen.end(),game.steamAppId)!=seen.end())continue;
                 const auto install=library/"steamapps"/"common"/Path(folder);
                 if(!fs::is_directory(install,error))continue;
-                game.folder=Text(install)+"\\";
+                game.folder=Text(install)+"\\";game.source="Steam";
                 seen.push_back(game.steamAppId);games.push_back(std::move(game));
             }
         }
@@ -175,6 +175,119 @@ bool Matches(const std::string& match,const std::string& processPath) {
 }
 }
 
+// ---- Other launchers ----
+namespace {
+#ifdef WINDOWS
+std::string FolderWithSlash(const fs::path& folder) {
+    auto text=Text(folder);
+    while(!text.empty()&&(text.back()=='\\'||text.back()=='/'))text.pop_back();
+    return text+"\\";
+}
+std::wstring RegistryText(HKEY key,const wchar_t* name) {
+    wchar_t buffer[1024]{};DWORD size=sizeof(buffer);
+    return RegGetValueW(key,nullptr,name,RRF_RT_REG_SZ,nullptr,buffer,&size)==ERROR_SUCCESS?std::wstring(buffer):std::wstring();
+}
+// Calls `visit` with every subkey of a registry key, in the 32-bit and the 64-bit view.
+template<class Visit> void EachSubkey(const wchar_t* path,Visit visit) {
+    for(const REGSAM view:{KEY_WOW64_32KEY,KEY_WOW64_64KEY}) {
+        HKEY root=nullptr;
+        if(RegOpenKeyExW(HKEY_LOCAL_MACHINE,path,0,KEY_READ|view,&root)!=ERROR_SUCCESS)continue;
+        wchar_t name[256];
+        for(DWORD index=0;;++index) {
+            DWORD length=256;
+            if(RegEnumKeyExW(root,index,name,&length,nullptr,nullptr,nullptr,nullptr)!=ERROR_SUCCESS)break;
+            HKEY child=nullptr;
+            if(RegOpenKeyExW(root,name,0,KEY_READ|view,&child)!=ERROR_SUCCESS)continue;
+            visit(child,std::wstring(name,length));
+            RegCloseKey(child);
+        }
+        RegCloseKey(root);
+    }
+}
+// Epic Games Launcher keeps one JSON manifest per installed item.
+void AddEpicGames(std::vector<InstalledGame>& games) {
+    wchar_t programData[MAX_PATH]{};
+    if(!GetEnvironmentVariableW(L"ProgramData",programData,MAX_PATH))return;
+    std::error_code error;
+    for(const auto& entry:fs::directory_iterator(fs::path(programData)/"Epic"/"EpicGamesLauncher"/"Data"/"Manifests",error)) {
+        if(entry.path().extension()!=L".item")continue;
+        const auto manifest=nlohmann::json::parse(ReadAll(entry.path()),nullptr,false);
+        if(!manifest.is_object()||manifest.value("bIsIncompleteInstall",false))continue;
+        if(manifest.contains("AppCategories")&&manifest["AppCategories"].is_array()) {
+            const auto& categories=manifest["AppCategories"];
+            if(std::none_of(categories.begin(),categories.end(),[](const nlohmann::json& c){return c.is_string()&&c.get<std::string>()=="games";}))continue;
+        }
+        if(!manifest.contains("DisplayName")||!manifest["DisplayName"].is_string()||!manifest.contains("InstallLocation")||!manifest["InstallLocation"].is_string())continue;
+        const auto folder=Path(manifest["InstallLocation"].get<std::string>());
+        if(folder.empty()||!fs::is_directory(folder,error))continue;
+        games.push_back({manifest["DisplayName"].get<std::string>(),FolderWithSlash(folder),0,"Epic Games"});
+    }
+}
+// EA games register an install folder, either under "EA Games" or as an uninstall entry published by Electronic Arts.
+void AddEaGames(std::vector<InstalledGame>& games) {
+    std::error_code error;
+    EachSubkey(L"SOFTWARE\\EA Games",[&](HKEY key,const std::wstring& keyName) {
+        const fs::path folder(RegistryText(key,L"Install Dir"));
+        if(folder.empty()||!fs::is_directory(folder,error))return;
+        auto name=RegistryText(key,L"DisplayName");
+        games.push_back({Utf8(name.empty()?keyName:name),FolderWithSlash(folder),0,"EA"});
+    });
+    EachSubkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",[&](HKEY key,const std::wstring&) {
+        if(RegistryText(key,L"Publisher").find(L"Electronic Arts")==std::wstring::npos)return;
+        const auto name=RegistryText(key,L"DisplayName");const fs::path folder(RegistryText(key,L"InstallLocation"));
+        // The EA app and its helpers are published by Electronic Arts too; only entries that look like a game folder count.
+        if(name.empty()||folder.empty()||!fs::is_directory(folder,error)||name.find(L"EA app")!=std::wstring::npos||name.find(L"EA Desktop")!=std::wstring::npos||name.find(L"Origin")==0)return;
+        games.push_back({Utf8(name),FolderWithSlash(folder),0,"EA"});
+    });
+}
+// Xbox app / Game Pass: each fixed drive names its games folder in a small ".GamingRoot" file,
+// and every game there carries a MicrosoftGame.config next to its executable.
+void AddXboxGames(std::vector<InstalledGame>& games) {
+    const DWORD drives=GetLogicalDrives();
+    for(int letter=0;letter<26;++letter) {
+        if(!(drives&(1u<<letter)))continue;
+        const std::wstring drive{wchar_t(L'A'+letter),L':',L'\\'};
+        if(GetDriveTypeW(drive.c_str())!=DRIVE_FIXED)continue;
+        std::vector<fs::path> roots;
+        const auto marker=ReadAll(fs::path(drive)/".GamingRoot");
+        // "RGBX", a count, then the folder name as UTF-16 text.
+        if(marker.size()>10&&marker.compare(0,4,"RGBX")==0) {
+            std::wstring folder;
+            for(size_t i=8;i+1<marker.size();i+=2){const wchar_t c=wchar_t(static_cast<unsigned char>(marker[i])|(static_cast<unsigned char>(marker[i+1])<<8));if(!c)break;folder+=c;}
+            if(!folder.empty())roots.push_back(fs::path(drive)/folder);
+        }
+        if(roots.empty())roots.push_back(fs::path(drive)/"XboxGames");
+        std::error_code error;
+        for(const auto& root:roots)for(const auto& entry:fs::directory_iterator(root,error)) {
+            const auto content=entry.path()/"Content";
+            if(!fs::exists(content/"MicrosoftGame.config",error))continue;
+            const auto config=ReadAll(content/"MicrosoftGame.config");
+            std::smatch found;std::string name;
+            if(std::regex_search(config,found,std::regex("DefaultDisplayName=\"([^\"]+)\"")))name=found[1].str();
+            if(name.empty()||name.rfind("ms-resource",0)==0)name=Text(entry.path().filename()); // the folder is named after the game
+            games.push_back({name,FolderWithSlash(content),0,"Xbox"});
+        }
+    }
+}
+#endif
+}
+namespace GameLibrary {
+std::vector<InstalledGame> InstalledGames() {
+    auto games=InstalledSteamGames();
+#ifdef WINDOWS
+    // One launcher failing must not hide the others.
+    for(const auto add:{&AddEpicGames,&AddEaGames,&AddXboxGames}) {
+        std::vector<InstalledGame> found;
+        try { add(found); } catch(...) { continue; }
+        // A game bought on one store but installed through another (for example an EA title in a Steam library) is listed once.
+        for(auto& game:found)if(std::none_of(games.begin(),games.end(),[&](const InstalledGame& known){return Matches(known.folder,game.folder+"x")||Matches(game.folder,known.folder+"x");}))games.push_back(std::move(game));
+    }
+    std::sort(games.begin(),games.end(),[](const InstalledGame& a,const InstalledGame& b){return a.name<b.name;});
+#endif
+    return games;
+}
+}
+
 // ---- CoreRuntime: the list, its file, and switching ----
 void CoreRuntime::LoadGames() {
     m_Games.clear();
@@ -224,6 +337,7 @@ std::string CoreRuntime::AddGame(std::string name,std::string match,int steamApp
         }
     } catch(...) {}
     auto id=game.id;
+    if(m_Suggestion&&m_Suggestion->folder==game.match)m_Suggestion.reset();
     m_Games.push_back(std::move(game));StoreGames();
     return id;
 }
@@ -248,6 +362,10 @@ void CoreRuntime::ToggleGame(const std::string& id) {
     const auto found=std::find_if(m_Games.begin(),m_Games.end(),[&](const GameProfileEntry& game){return game.id==id;});
     if(found==m_Games.end())throw std::runtime_error("GameProfileNotFound");
     ActivateGame(*found,true);
+}
+void CoreRuntime::ApplyGame(const std::string& id,bool manual) {
+    for(const auto& game:m_Games)if(game.id==id){ActivateGame(game,manual);return;}
+    throw std::runtime_error("GameProfileNotFound");
 }
 void CoreRuntime::ActivateGame(const GameProfileEntry& game,bool manual) {
     DeactivateGame();
@@ -275,8 +393,25 @@ void CoreRuntime::ScanGames() {
     const auto now=std::chrono::steady_clock::now();
     if(now<m_NextGameScan)return;
     m_NextGameScan=now+std::chrono::seconds(3);
-    if(!m_GameAutoSwitch||m_Games.empty())return;
+    // The launcher libraries are read on another thread: it touches many files and must not stall this one.
+    if(m_LibraryScan.valid()&&m_LibraryScan.wait_for(std::chrono::seconds(0))==std::future_status::ready) { try { m_Library=m_LibraryScan.get(); } catch(...) {} }
+    if(!m_LibraryScan.valid()&&now>=m_NextLibraryScan) {
+        m_NextLibraryScan=now+std::chrono::minutes(2);
+        m_LibraryScan=std::async(std::launch::async,[]{return GameLibrary::InstalledGames();});
+    }
+    const bool watchProfiles=m_GameAutoSwitch&&!m_Games.empty();
+    if(!watchProfiles&&m_Library.empty()){m_Suggestion.reset();return;}
     const auto processes=GameLibrary::RunningProcessPaths();
+    // A running library game that has no profile yet is offered, never added on its own.
+    const InstalledGame* candidate=nullptr;
+    for(const auto& game:m_Library) {
+        const bool known=std::any_of(m_Games.begin(),m_Games.end(),[&](const GameProfileEntry& profile){
+            return profile.match==game.folder||GameLibrary::Matches(game.folder,profile.match)||GameLibrary::Matches(profile.match,game.folder+"x");});
+        if(!known&&std::any_of(processes.begin(),processes.end(),[&](const std::string& path){return GameLibrary::Matches(game.folder,path);})){candidate=&game;break;}
+    }
+    if(!candidate)m_Suggestion.reset();
+    else if(!m_Suggestion||m_Suggestion->folder!=candidate->folder)m_Suggestion=std::make_shared<const InstalledGame>(*candidate);
+    if(!watchProfiles)return;
     const GameProfileEntry* running=nullptr;bool activeRunning=false;
     for(const auto& game:m_Games) {
         const bool found=std::any_of(processes.begin(),processes.end(),[&](const std::string& path){return GameLibrary::Matches(game.match,path);});

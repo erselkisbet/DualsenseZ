@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- Game profiles: give a game its own controller settings and switch to them automatically while the game runs, or by clicking its cover. Installed Steam games are listed for you; any other game can be added through its .exe.
+- Game profiles: give a game its own controller settings and switch to them automatically while the game runs, or by clicking its cover. Installed games from the Steam, Epic Games, EA and Xbox libraries are listed for you; any other game can be added through its .exe. A game you start that has no profile yet is offered on the shelf and added with one click.
 - Profiles page holding the local profiles (moved from the Controller page) and the game profiles.
 - Update notice: on launch the app checks GitHub for a newer release and shows a link to its download page. It can be turned off in Settings; nothing is downloaded automatically.
 

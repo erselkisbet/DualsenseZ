@@ -77,4 +77,5 @@ struct ApplicationSnapshot {
     std::shared_ptr<const std::vector<GameProfileEntry>> games=std::make_shared<const std::vector<GameProfileEntry>>();
     std::string activeGame; // id of the game whose profile is applied, or empty
     bool gameAutoSwitch = true;
+    std::shared_ptr<const InstalledGame> suggestedGame; // running library game without a profile, or null
 };

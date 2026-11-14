@@ -712,41 +712,75 @@ void FeaturePage::Profiles(std::shared_ptr<View> const& v) {
     Divider(games);
     // A shelf of portrait covers, like a game library; the last tile adds a game.
     VariableSizedWrapGrid shelf;shelf.Orientation(Orientation::Horizontal);shelf.ItemWidth(166);shelf.ItemHeight(258);games.Children().Append(shelf);
-    struct ShelfState {std::shared_ptr<const std::vector<GameProfileEntry>> list;std::string active;bool running=false,built=false;};
+    struct ShelfState {std::shared_ptr<const std::vector<GameProfileEntry>> list;std::string active,suggested;bool running=false,built=false;};
     auto state=std::make_shared<ShelfState>();
     v->bindings.push_back([weak=get_weak(),shelf,autoSwitch,state](auto const& s,bool){
         if(autoSwitch.IsOn()!=s.gameAutoSwitch)autoSwitch.IsOn(s.gameAutoSwitch);
         if(autoSwitch.IsEnabled()!=s.running)autoSwitch.IsEnabled(s.running);
         // The list is immutable and shared, so comparing the pointer tells whether anything changed.
-        if(state->built&&state->list==s.games&&state->active==s.activeGame&&state->running==s.running)return;
+        const auto suggested=s.suggestedGame?s.suggestedGame->folder:std::string{};
+        if(state->built&&state->list==s.games&&state->active==s.activeGame&&state->suggested==suggested&&state->running==s.running)return;
         auto self=weak.get();if(!self)return;
-        state->built=true;state->list=s.games;state->active=s.activeGame;state->running=s.running;
+        state->built=true;state->list=s.games;state->active=s.activeGame;state->suggested=suggested;state->running=s.running;
         shelf.Children().Clear();
         for(auto const& game:*s.games) {
             shelf.Children().Append(self->GameCard(game,game.id==s.activeGame,s.running));
             if(game.cover.empty()&&self->m_coverAttempts.insert(game.id).second)self->FetchCover(game);
         }
+        if(s.suggestedGame)shelf.Children().Append(self->SuggestionCard(*s.suggestedGame,s.running));
         shelf.Children().Append(self->AddGameCard(s.running));
         NativeLocalization::Invalidate();
     });
 }
-FrameworkElement FeaturePage::GameCard(GameProfileEntry const& game,bool active,bool enabled) {
-    auto brush=[](wchar_t const* key){return Application::Current().Resources().Lookup(box_value(key)).as<Media::Brush>();};
+// A portrait tile: the cover when there is one, the game's name on the brand gradient otherwise.
+static Grid CoverFace(std::string const& gameName,std::string const& coverFile) {
     Grid face;
     // Shown until a cover is found, and behind it if the image cannot be read.
     Media::LinearGradientBrush gradient;gradient.StartPoint({0,0});gradient.EndPoint({1,1});
     Media::GradientStop top;top.Color(Windows::UI::Color{255,11,79,192});top.Offset(0);gradient.GradientStops().Append(top);
     Media::GradientStop bottom;bottom.Color(Windows::UI::Color{255,0,16,46});bottom.Offset(1);gradient.GradientStops().Append(bottom);
     Border fallback;fallback.Background(gradient);
-    TextBlock title;title.Text(to_hstring(game.name));title.TextWrapping(TextWrapping::Wrap);title.TextAlignment(TextAlignment::Center);title.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+    TextBlock title;title.Text(to_hstring(gameName));title.TextWrapping(TextWrapping::Wrap);title.TextAlignment(TextAlignment::Center);title.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
     title.Foreground(Media::SolidColorBrush(Windows::UI::Color{255,255,255,255}));title.VerticalAlignment(VerticalAlignment::Center);title.Margin(Thickness{12,12,12,12});
     fallback.Child(title);face.Children().Append(fallback);
-    if(!game.cover.empty()) try {
-        std::wstring location=L"file:///"+std::wstring(to_hstring(game.cover));std::replace(location.begin(),location.end(),L'\\',L'/');
+    if(!coverFile.empty()) try {
+        std::wstring location=L"file:///"+std::wstring(to_hstring(coverFile));std::replace(location.begin(),location.end(),L'\\',L'/');
         Media::Imaging::BitmapImage bitmap;bitmap.DecodePixelWidth(300);bitmap.UriSource(Windows::Foundation::Uri(location));
         Image cover;cover.Source(bitmap);cover.Stretch(Media::Stretch::UniformToFill);cover.HorizontalAlignment(HorizontalAlignment::Center);cover.VerticalAlignment(VerticalAlignment::Center);
         face.Children().Append(cover);
     } catch(...) {}
+    return face;
+}
+// A running game that has no profile yet. Nothing is saved until the user asks for it.
+FrameworkElement FeaturePage::SuggestionCard(InstalledGame const& game,bool enabled) {
+    auto brush=[](wchar_t const* key){return Application::Current().Resources().Lookup(box_value(key)).as<Media::Brush>();};
+    // Only a cover Steam already has on disk is shown here; nothing is downloaded for a game that was not added.
+    auto face=CoverFace(game.name,game.steamAppId>0?GameLibrary::SteamCover(game.steamAppId):std::string{});
+    face.Opacity(0.45);
+    Grid layers;layers.Children().Append(face);
+    Border badge;badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));badge.Padding(Thickness{6,2,6,3});badge.Margin(Thickness{8,8,8,8});
+    badge.HorizontalAlignment(HorizontalAlignment::Left);badge.VerticalAlignment(VerticalAlignment::Top);badge.Background(brush(L"SystemFillColorSuccessBrush"));
+    auto running=Text("@WinUI.GameDetected@",11);running.FontWeight(Windows::UI::Text::FontWeights::SemiBold());running.Foreground(Media::SolidColorBrush(Windows::UI::Color{255,0,0,0}));
+    badge.Child(running);layers.Children().Append(badge);
+    Border add;add.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));add.Padding(Thickness{10,6,10,7});add.Margin(Thickness{8,8,8,8});
+    add.HorizontalAlignment(HorizontalAlignment::Stretch);add.VerticalAlignment(VerticalAlignment::Bottom);add.Background(brush(L"AccentFillColorDefaultBrush"));
+    Panel addContent;addContent.Orientation(Orientation::Horizontal);addContent.Spacing(6);addContent.HorizontalAlignment(HorizontalAlignment::Center);
+    FontIcon plus;plus.Glyph(L"\uE710");plus.FontSize(12);plus.Foreground(brush(L"TextOnAccentFillColorPrimaryBrush"));addContent.Children().Append(plus);
+    auto addLabel=Text("@WinUI.AddProfile@",12);addLabel.FontWeight(Windows::UI::Text::FontWeights::SemiBold());addLabel.Foreground(brush(L"TextOnAccentFillColorPrimaryBrush"));addContent.Children().Append(addLabel);
+    add.Child(addContent);layers.Children().Append(add);
+    Border clip;clip.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));clip.Child(layers);
+    Controls::Button button;button.Width(150);button.Height(225);button.Padding(Thickness{0,0,0,0});button.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+    button.HorizontalContentAlignment(HorizontalAlignment::Stretch);button.VerticalContentAlignment(VerticalAlignment::Stretch);
+    button.Content(clip);button.IsEnabled(enabled);
+    Automation::AutomationProperties::SetName(button,to_hstring(NativeLocalization::Value("@WinUI.AddProfile@")+": "+game.name));ToolTipService::SetToolTip(button,box_value(to_hstring(game.name)));
+    button.Click([weak=get_weak(),game](auto&&,auto&&){if(auto self=weak.get();self&&self->m_host)self->Submit(self->m_host->Core().AddGameProfile(game.name,game.folder,game.steamAppId,true));});
+    Panel card;card.Spacing(6);card.Width(150);card.HorizontalAlignment(HorizontalAlignment::Left);card.VerticalAlignment(VerticalAlignment::Top);card.Children().Append(button);
+    TextBlock name;name.Text(to_hstring(game.name));name.FontSize(12);name.TextTrimming(TextTrimming::CharacterEllipsis);name.Opacity(0.7);card.Children().Append(name);
+    return card;
+}
+FrameworkElement FeaturePage::GameCard(GameProfileEntry const& game,bool active,bool enabled) {
+    auto brush=[](wchar_t const* key){return Application::Current().Resources().Lookup(box_value(key)).as<Media::Brush>();};
+    auto face=CoverFace(game.name,game.cover);
     if(active) {
         Border badge;badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));badge.Padding(Thickness{6,2,6,3});badge.Margin(Thickness{8,8,8,8});
         badge.HorizontalAlignment(HorizontalAlignment::Left);badge.VerticalAlignment(VerticalAlignment::Bottom);badge.Background(brush(L"AccentFillColorDefaultBrush"));
@@ -800,7 +834,7 @@ fire_and_forget FeaturePage::AddGameDialog() {
     try {
         std::vector<InstalledGame> installed;
         const auto existing=host->Core().GetSnapshot()->games;
-        for(auto& game:GameLibrary::InstalledSteamGames())
+        for(auto& game:GameLibrary::InstalledGames())
             if(std::none_of(existing->begin(),existing->end(),[&](GameProfileEntry const& added){return added.match==game.folder||(added.steamAppId>0&&added.steamAppId==game.steamAppId);}))installed.push_back(std::move(game));
         // A dialog is outside the page tree, so every string is translated here.
         ContentDialog dialog;dialog.XamlRoot(XamlRoot());
@@ -809,7 +843,13 @@ fire_and_forget FeaturePage::AddGameDialog() {
         Panel body;body.Spacing(12);body.MinWidth(360);
         TextBlock description;description.Text(NativeLocalization::Text(installed.empty()?L"@WinUI.NoSteamGames@":L"@WinUI.AddGameDescription@"));description.TextWrapping(TextWrapping::Wrap);body.Children().Append(description);
         ListView list;list.SelectionMode(ListViewSelectionMode::Single);list.MaxHeight(320);
-        for(auto const& game:installed)list.Items().Append(box_value(to_hstring(game.name)));
+        for(auto const& game:installed) {
+            Grid row;row.ColumnSpacing(12);row.ColumnDefinitions().Append(ColumnDefinition());ColumnDefinition sourceColumn;sourceColumn.Width(GridLengthHelper::Auto());row.ColumnDefinitions().Append(sourceColumn);
+            TextBlock title;title.Text(to_hstring(game.name));title.TextTrimming(TextTrimming::CharacterEllipsis);row.Children().Append(title);
+            TextBlock source;source.Text(to_hstring(game.source));source.FontSize(12);source.Opacity(0.6);source.VerticalAlignment(VerticalAlignment::Center);Grid::SetColumn(source,1);row.Children().Append(source);
+            ListViewItem item;item.Content(row);item.HorizontalContentAlignment(HorizontalAlignment::Stretch);Automation::AutomationProperties::SetName(item,to_hstring(game.name+" ("+game.source+")"));
+            list.Items().Append(item);
+        }
         if(!installed.empty())body.Children().Append(list);
         dialog.Content(body);
         dialog.PrimaryButtonText(NativeLocalization::Text(L"@WinUI.AddSelectedGame@"));dialog.SecondaryButtonText(NativeLocalization::Text(L"@WinUI.BrowseForExe@"));
