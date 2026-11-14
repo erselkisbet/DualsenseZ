@@ -8,7 +8,7 @@ DualSense kontrolcü emülasyonu ve özelleştirmesi için açık kaynaklı, yer
 
 DualsenseZ, [WujekFoliarz/DualSenseY-v2](https://github.com/WujekFoliarz/DualSenseY-v2) projesinin üzerine geliştirilmiştir. Kontrolcü, emülasyon, ses ve UDP çekirdeği özgün projeden gelir; DualsenseZ, ImGui arayüzünün yerine C++ ve WinUI 3 (Windows App SDK) ile yazılmış yerel bir arayüz koyar.
 
-> **Beta.** Bu sürüm 1.0.0-beta.1'dir. Pürüzler olabilir; karşılaştıklarınızı bildirin.
+> **Beta.** Bu sürüm 1.0.0-beta.2'dir. Pürüzler olabilir; karşılaştıklarınızı bildirin.
 
 ## Özellikler
 

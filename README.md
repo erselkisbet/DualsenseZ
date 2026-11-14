@@ -8,7 +8,7 @@ An open-source, native Windows app for DualSense controller emulation and custom
 
 DualsenseZ is built on [WujekFoliarz/DualSenseY-v2](https://github.com/WujekFoliarz/DualSenseY-v2). The controller, emulation, audio and UDP core comes from that project; DualsenseZ replaces its ImGui interface with a native one written in C++ with WinUI 3 (Windows App SDK).
 
-> **Beta.** This is version 1.0.0-beta.1. Expect rough edges and please report what you find.
+> **Beta.** This is version 1.0.0-beta.2. Expect rough edges and please report what you find.
 
 ## Features
 
