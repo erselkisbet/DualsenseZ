@@ -80,6 +80,7 @@ struct ApplicationCore::Impl {
         s->selectedController=runtime.SelectedController();
         s->preferences=Preferences(runtime.Settings());
         s->hidingAvailable=runtime.HidingAvailable();
+        s->games=runtime.GameList();s->activeGame=runtime.ActiveGame();s->gameAutoSwitch=runtime.GameAutoSwitch();
         if(running) {
             s->emulationAvailable=runtime.Emulation().IsVigemConnected();
             s->udpActive=runtime.ModConnection().IsActive();
@@ -341,6 +342,25 @@ ApplicationCore::RequestId ApplicationCore::SetTrigger(int i,int side,bool dsx,i
         (dsx?s.currentDSXItem:s.currentSonyItem)[side]=mode;
         if(side==0)s.isLeftUsingDsxTrigger=dsx;else s.isRightUsingDsxTrigger=dsx;
         ApplyTriggerParameters(s);return std::string{};});
+}
+ApplicationCore::RequestId ApplicationCore::AddGameProfile(std::string name,std::string match,int steamAppId) {
+    if(name.empty()||match.empty()||steamAppId<0) return 0;
+    return m_Impl->Enqueue([name=std::move(name),match=std::move(match),steamAppId](CoreRuntime& r){r.AddGame(name,match,steamAppId);return std::string("GameProfileAdded");});
+}
+ApplicationCore::RequestId ApplicationCore::RemoveGameProfile(std::string id) {
+    if(id.empty()) return 0;
+    return m_Impl->Enqueue([id=std::move(id)](CoreRuntime& r){r.RemoveGame(id);return std::string("GameProfileRemoved");});
+}
+ApplicationCore::RequestId ApplicationCore::SetGameCover(std::string id,std::string cover) {
+    if(id.empty()) return 0;
+    return m_Impl->Enqueue([id=std::move(id),cover=std::move(cover)](CoreRuntime& r){r.SetGameCover(id,cover);return std::string{};});
+}
+ApplicationCore::RequestId ApplicationCore::SetGameAutoSwitch(bool enabled) {
+    return m_Impl->Enqueue([enabled](CoreRuntime& r){r.SetGameAutoSwitch(enabled);return std::string{};});
+}
+ApplicationCore::RequestId ApplicationCore::ToggleGameProfile(std::string id) {
+    if(id.empty()) return 0;
+    return m_Impl->Enqueue([id=std::move(id)](CoreRuntime& r){r.ToggleGame(id);return std::string{};});
 }
 ApplicationCore::RequestId ApplicationCore::AssociateProfiles() {
     return m_Impl->Enqueue([](CoreRuntime&){

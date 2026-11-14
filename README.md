@@ -20,6 +20,8 @@ DualsenseZ is built on [WujekFoliarz/DualSenseY-v2](https://github.com/WujekFoli
 - Stick deadzones with a live preview
 - UDP support for games with DualSense mods
 - Profiles saved and loaded as `.dsy` files
+- Game profiles that switch automatically when a game starts, shown as a shelf of covers
+- Update notice when a newer release is available
 - Start with Windows, hide to tray
 - English and Turkish interface
 

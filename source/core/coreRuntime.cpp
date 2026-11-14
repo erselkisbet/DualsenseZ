@@ -69,6 +69,7 @@ CoreRuntime::StartResult CoreRuntime::Start(const std::string& profilePath) {
                 m_Settings[i]=s;m_SessionRestored[i]=true;
             }
         } catch(...) { LOGE("Failed to load the last session's controller settings"); }
+        LoadGames();
         m_Udp=std::make_unique<UDP>(m_AppSettings.LocalPort);
         if(m_Udp->IsConnectedInsteadOfBinded()) {
             if(!profilePath.empty()) m_Udp->SendConfigPathToAnotherInstance(profilePath);
@@ -108,6 +109,7 @@ CoreRuntime::TickResult CoreRuntime::Tick() {
     m_Vigem->SetSelectedController(m_SelectedController);
     m_Udp->SetVibrationToUdpConfig(m_Settings[m_SelectedController].rumbleFromEmulatedController);
     m_Audio->Validate();
+    ScanGames();
     Synchronize();
     for(int i=0;i<4;++i) {
         // A restored last session wins over the controller's default profile, which would otherwise
@@ -159,6 +161,8 @@ void CoreRuntime::Stop() {
     m_Vigem.reset(); // UDP remains alive until ViGEm joins.
     m_Audio.reset();
     m_Udp.reset();
+    // Hand the controller back to the user's own settings first, so the session saved below is theirs.
+    if(wasRunning)DeactivateGame();
     if(wasRunning)try {
         m_AppSettings.LightingPreferences=nlohmann::json::array();
         for(const auto& s:m_Settings)m_AppSettings.LightingPreferences.push_back({

@@ -20,6 +20,8 @@ DualsenseZ, [WujekFoliarz/DualSenseY-v2](https://github.com/WujekFoliarz/DualSen
 - Canlı önizlemeli çubuk ölü bölgeleri
 - DualSense modlu oyunlar için UDP desteği
 - `.dsy` dosyalarıyla profil kaydetme ve yükleme
+- Oyun başlayınca kendiliğinden devreye giren, kapak rafı olarak gösterilen oyun profilleri
+- Yeni sürüm çıktığında güncelleme bildirimi
 - Windows ile başlatma, tepsiye gizleme
 - Türkçe ve İngilizce arayüz
 

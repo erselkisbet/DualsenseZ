@@ -2,6 +2,7 @@
 #include <array>
 #include "featureModel.hpp"
 #include "lightingLevels.hpp"
+#include "gameProfiles.hpp"
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -72,4 +73,8 @@ struct ApplicationSnapshot {
     bool hidingAvailable = false;
     ApplicationPreferences preferences;
     std::array<ControllerSnapshot,4> controllers;
+    // Shared and immutable: replaced, never edited, whenever the list changes.
+    std::shared_ptr<const std::vector<GameProfileEntry>> games=std::make_shared<const std::vector<GameProfileEntry>>();
+    std::string activeGame; // id of the game whose profile is applied, or empty
+    bool gameAutoSwitch = true;
 };

@@ -30,9 +30,11 @@ struct SettingsFileGuard {
     }
 };
 int main(int argc,char** argv) {
-    SettingsFileGuard settingsFile("Config.json"),sessionFile("Session.json");
+    SettingsFileGuard settingsFile("Config.json"),sessionFile("Session.json"),gamesFile("GameProfiles.json");
     try {
         TestWorkerExchange();
+        Check(GameLibrary::Matches("C:\\Games\\Elden Ring\\","c:/games/elden ring/game/eldenring.exe")&&!GameLibrary::Matches("C:\\Games\\Elden Ring\\","C:\\Games\\Elden Ring 2\\game.exe"),"install folder matches its own processes only");
+        Check(GameLibrary::Matches("C:\\Games\\game.exe","C:\\GAMES\\Game.exe")&&!GameLibrary::Matches("C:\\Games\\game.exe","C:\\Games\\game.exe.bak")&&!GameLibrary::Matches("","C:\\x.exe"),"executable match is exact and case-insensitive");
         Check(UpdateCheck::IsNewer("v1.0.0-beta.2","1.0.0-beta.1")&&!UpdateCheck::IsNewer("1.0.0-beta.1","1.0.0-beta.1"),"newer pre-release detected");
         Check(UpdateCheck::IsNewer("1.0.0","1.0.0-beta.9")&&!UpdateCheck::IsNewer("1.0.0-beta.9","1.0.0"),"final release outranks its pre-releases");
         Check(UpdateCheck::IsNewer("1.0.0-beta.10","1.0.0-beta.9")&&UpdateCheck::IsNewer("1.0.0-beta.1","1.0.0-alpha.7")&&UpdateCheck::IsNewer("1.10.0","1.9.5"),"numeric version ordering");

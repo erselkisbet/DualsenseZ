@@ -21,7 +21,6 @@ namespace winrt::DualsenseZNative::implementation {
 ControllerPage::ControllerPage() {
     InitializeComponent();NavigationCacheMode(Navigation::NavigationCacheMode::Required);
     ControllerPageHeader::Attach(PageHeader());
-    ResponsivePageLayout::Attach(Dashboard(),1,1,700);
     ResponsivePageLayout::Attach(InputLayout(),1,1,700);
     HideLayout().SizeChanged([this](auto const&,auto const&){ArrangeVisibility();});
     auto gaps=[](Grid const& grid,double spacing) {
@@ -29,7 +28,7 @@ ControllerPage::ControllerPage() {
             if(auto layout=weak.get())layout.RowSpacing(args.NewSize().Width<700?spacing:0);
         });
     };
-    gaps(Dashboard(),16);gaps(InputLayout(),20);
+    gaps(InputLayout(),20);
 }
 void ControllerPage::ArrangeVisibility() {
     auto layout=HideLayout();auto controls=layout.Children().GetAt(0).as<FrameworkElement>();
@@ -47,9 +46,6 @@ void ControllerPage::Update(ApplicationSnapshot const& s) {
     text(ShortcutsTitle(),L"@WinUI.KeyboardShortcuts@");text(ShortcutsDescription(),L"@WinUI.KeyboardShortcutsDescription@");
     Empty().IsOpen(!c.connected);
     Empty().Visibility(c.connected?Visibility::Collapsed:Visibility::Visible);
-    text(ProfileName(),c.profilePath.empty()?hstring(L"@WinUI.CurrentSettingsNotSaved@"):to_hstring(std::filesystem::path(c.profilePath).stem().string()));
-    text(ProfilePath(),to_hstring(c.profilePath));ProfilePath().Visibility(c.profilePath.empty()?Visibility::Collapsed:Visibility::Visible);
-    LoadProfile().IsEnabled(s.running);SaveProfile().IsEnabled(s.running);SetDefault().IsEnabled(s.running);RemoveDefault().IsEnabled(s.running);
     const bool emulationEnabled=s.running&&c.connected&&s.emulationAvailable;
     Share().IsEnabled(emulationEnabled);
     LeftDeadzone().IsEnabled(emulationEnabled);RightDeadzone().IsEnabled(emulationEnabled);LeftDeadzoneSlider().IsEnabled(emulationEnabled);RightDeadzoneSlider().IsEnabled(emulationEnabled);
@@ -104,28 +100,7 @@ void ControllerPage::DeadzoneSliderChanged(Windows::Foundation::IInspectable con
     if(NativeLocalization::applying||m_updating||!m_host)return;
     Submitted(m_host->Core().SetControllerOption(m_selected,sender.as<Slider>()==LeftDeadzoneSlider()?ControllerOption::LeftDeadzone:ControllerOption::RightDeadzone,int(std::round(args.NewValue()))));
 }
-void ControllerPage::ProfileClicked(Windows::Foundation::IInspectable const& sender,RoutedEventArgs const&) {
-    PickProfile(std::stoi(to_string(unbox_value<hstring>(sender.as<FrameworkElement>().Tag()))));
-}
-void ControllerPage::RemoveDefaultClicked(Windows::Foundation::IInspectable const&,RoutedEventArgs const&) {
-    if(m_host)Submitted(m_host->Core().RemoveDefaultProfile(m_selected));
-}
 void ControllerPage::OpenSettingsClicked(Windows::Foundation::IInspectable const&,RoutedEventArgs const&) {
     if(m_openSettings)m_openSettings();
-}
-fire_and_forget ControllerPage::PickProfile(int operation) {
-    auto lifetime=get_strong();auto host=m_host;const int controller=m_selected;const HWND window=m_window;
-    if(!host||!window)co_return;
-    try {
-        Windows::Storage::StorageFile file{nullptr};
-        if(operation==1){Windows::Storage::Pickers::FileSavePicker picker;picker.as<IInitializeWithWindow>()->Initialize(window);
-            picker.SuggestedFileName(NativeLocalization::Text(L"@WinUI.ControllerProfile@"));picker.FileTypeChoices().Insert(NativeLocalization::Text(L"@WinUI.DualsenseZProfile@"),single_threaded_vector<hstring>({L".dsy"}));file=co_await picker.PickSaveFileAsync();}
-        else {Windows::Storage::Pickers::FileOpenPicker picker;picker.as<IInitializeWithWindow>()->Initialize(window);picker.FileTypeFilter().Append(L".dsy");file=co_await picker.PickSingleFileAsync();}
-        if(!file||host->Status()!=CoreHost::State::Running)co_return;
-        auto path=to_string(file.Path());ApplicationCore::RequestId id=0;
-        switch(operation){case 0:id=host->Core().LoadProfile(controller,path);break;case 1:id=host->Core().SaveProfile(controller,path);break;
-        case 2:id=host->Core().SetDefaultProfile(controller,path);break;}
-        Submitted(id);
-    }catch(hresult_error const& e){if(host->Status()==CoreHost::State::Running){m_notifications.Show(hstring(L"@WinUI.FilePickerFailed@\n")+e.message(),InfoBarSeverity::Error);}}
 }
 }

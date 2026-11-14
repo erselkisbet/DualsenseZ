@@ -19,6 +19,10 @@ DualsenseZ is built on the work listed below. Each component keeps its own licen
 
 Wireless haptics in the original project build on [SAxense](https://github.com/egormanga/SAxense).
 
+## Game covers
+
+Cover images on the Profiles page are not part of DualsenseZ. They are copied from the local Steam client's cache or downloaded from Steam's public image servers when you add a game, stored under `Documents\DualsenseZ\Covers`, and belong to their respective publishers.
+
 ## Optional drivers (not included)
 
 - [ViGEmBus](https://github.com/nefarius/ViGEmBus) — required for Xbox 360 / DualShock 4 emulation.

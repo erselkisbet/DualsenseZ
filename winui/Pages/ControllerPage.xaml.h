@@ -12,11 +12,8 @@ struct ControllerPage : ControllerPageT<ControllerPage> {
     void OptionChanged(Windows::Foundation::IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
     void DeadzoneChanged(Microsoft::UI::Xaml::Controls::NumberBox const&,Microsoft::UI::Xaml::Controls::NumberBoxValueChangedEventArgs const&);
     void DeadzoneSliderChanged(Windows::Foundation::IInspectable const&,Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
-    void ProfileClicked(Windows::Foundation::IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
-    void RemoveDefaultClicked(Windows::Foundation::IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
     void OpenSettingsClicked(Windows::Foundation::IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 private:
-    winrt::fire_and_forget PickProfile(int operation);
     void Submitted(ApplicationCore::RequestId id);
     void ArrangeVisibility();
     std::shared_ptr<CoreHost> m_host;

@@ -41,6 +41,12 @@ public:
     RequestId SetDefaultProfile(int index, std::string path);
     RequestId RemoveDefaultProfile(int index);
     RequestId SetPreferences(ApplicationPreferences preferences);
+    // Game profiles: match is the game's executable or its install folder ending in a slash.
+    RequestId AddGameProfile(std::string name,std::string match,int steamAppId);
+    RequestId RemoveGameProfile(std::string id);
+    RequestId SetGameCover(std::string id,std::string cover);
+    RequestId SetGameAutoSwitch(bool enabled);
+    RequestId ToggleGameProfile(std::string id); // applies the game's profile, or returns to the user's own settings
 private:
     struct Impl;
     std::unique_ptr<Impl> m_Impl;

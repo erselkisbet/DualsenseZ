@@ -8,6 +8,7 @@
 #include "keyboardMouseMapper.hpp"
 #include <memory>
 #include "core/workerExchange.hpp"
+#include "core/gameProfiles.hpp"
 
 // Internal, owner-thread-only backend implementation.
 // Single host-thread API. Tick and the temporary legacy references must not be
@@ -35,8 +36,23 @@ public:
     AudioPassthrough& Audio() { return *m_Audio; }
     Vigem& Emulation() { return *m_Vigem; }
     UDP& ModConnection() { return *m_Udp; }
+
+    // Per-game profiles. One game's profile can be active at a time, on the controller selected when it started.
+    const std::shared_ptr<const std::vector<GameProfileEntry>>& GameList() const { return m_GameList; }
+    const std::string& ActiveGame() const { return m_ActiveGame; }
+    bool GameAutoSwitch() const { return m_GameAutoSwitch; }
+    std::string AddGame(std::string name,std::string match,int steamAppId);
+    void RemoveGame(const std::string& id);
+    void SetGameCover(const std::string& id,std::string cover);
+    void SetGameAutoSwitch(bool enabled);
+    void ToggleGame(const std::string& id);
 private:
     void Synchronize();
+    void LoadGames();
+    void StoreGames();
+    void ActivateGame(const GameProfileEntry& game,bool manual);
+    void DeactivateGame();
+    void ScanGames();
     s_scePadSettings m_Settings[4]{};
     WorkerExchange m_Workers;
     AppSettings m_AppSettings{};
@@ -58,4 +74,11 @@ private:
     bool m_SessionRestored[4]{}; // every setting loaded from the last session // lighting loaded from the last session's saved preferences
     std::array<int,3> m_LastLightbar[4]{{-1,-1,-1},{-1,-1,-1},{-1,-1,-1},{-1,-1,-1}};
     int m_SelectedController=0;
+    std::vector<GameProfileEntry> m_Games;
+    std::shared_ptr<const std::vector<GameProfileEntry>> m_GameList=std::make_shared<const std::vector<GameProfileEntry>>();
+    std::string m_ActiveGame;
+    s_scePadSettings m_BeforeGame{}; // the user's own settings while a game's profile is active
+    int m_GameSlot=0;
+    bool m_GameManual=false, m_GameAutoSwitch=true;
+    std::chrono::steady_clock::time_point m_NextGameScan{};
 };

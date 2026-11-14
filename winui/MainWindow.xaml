@@ -7,6 +7,7 @@
    <NavigationView.MenuItems>
     <NavigationViewItem Content="@Overview@" Tag="Overview" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
     <NavigationViewItemSeparator/>
+    <NavigationViewItem Content="@WinUI.Profiles@" Tag="Profiles" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
     <NavigationViewItem Content="@Controller@" Tag="Controller" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE7FC;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
     <NavigationViewItem Content="@WinUI.AdaptiveTriggers@" Tag="Adaptive Triggers" ><NavigationViewItem.Icon><FontIcon Glyph="&#xEC4A;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>
     <NavigationViewItem Content="@WinUI.SoundHaptics@" Tag="Sound &amp; Haptics" ><NavigationViewItem.Icon><FontIcon Glyph="&#xE9E9;" Style="{StaticResource NavigationMenuIconStyle}"/></NavigationViewItem.Icon></NavigationViewItem>

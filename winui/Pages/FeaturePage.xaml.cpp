@@ -13,6 +13,16 @@
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Windows.System.h>
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Pickers.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Windows.Data.Json.h>
+#include <shobjidl_core.h>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <algorithm>
@@ -167,9 +177,9 @@ void FeaturePage::OnNavigatedTo(Navigation::NavigationEventArgs const& args) {
 std::shared_ptr<FeaturePage::View> FeaturePage::Build(std::string const& name) {
     auto v=std::make_shared<View>();v->content.Spacing(16);v->content.HorizontalAlignment(HorizontalAlignment::Stretch);v->content.Margin(Thickness{0,0,20,0});
     v->root.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);v->root.Content(v->content);
-    const char* title=name=="Adaptive Triggers"?"@WinUI.AdaptiveTriggers@":name=="Sound & Haptics"?"@WinUI.SoundHaptics@":name=="Lighting"?"@Lighting@":name=="Motion & Touch"?"@WinUI.MotionTouch@":name=="Diagnostics"?"@Diagnostics@":"@Diagnostics@";
+    const char* title=name=="Profiles"?"@WinUI.Profiles@":name=="Adaptive Triggers"?"@WinUI.AdaptiveTriggers@":name=="Sound & Haptics"?"@WinUI.SoundHaptics@":name=="Lighting"?"@Lighting@":name=="Motion & Touch"?"@WinUI.MotionTouch@":name=="Diagnostics"?"@Diagnostics@":"@Diagnostics@";
     Panel labels;labels.Spacing(6);labels.Children().Append(Text(title,28));
-    const char* description=name=="Adaptive Triggers"?"@TriggersDescription@":name=="Sound & Haptics"?"@WinUI.AudioAndHapticFeedback@":name=="Lighting"?"@LightingDescription@":name=="Motion & Touch"?"@MotionDescription@":name=="Diagnostics"?"@WinUI.LiveInputAndHaptics@":"@WinUI.LiveInputAndHaptics@";
+    const char* description=name=="Profiles"?"@WinUI.ProfilesDescription@":name=="Adaptive Triggers"?"@TriggersDescription@":name=="Sound & Haptics"?"@WinUI.AudioAndHapticFeedback@":name=="Lighting"?"@LightingDescription@":name=="Motion & Touch"?"@MotionDescription@":name=="Diagnostics"?"@WinUI.LiveInputAndHaptics@":"@WinUI.LiveInputAndHaptics@";
     auto subtitle=Text(description);subtitle.Opacity(0.7);labels.Children().Append(subtitle);
     InfoBar state;state.IsClosable(false);state.Visibility(Visibility::Collapsed);v->content.Children().Append(state);
     v->bindings.push_back([state,name](auto const& s,bool){auto& c=s.controllers[s.selectedController];
@@ -209,6 +219,7 @@ std::shared_ptr<FeaturePage::View> FeaturePage::Build(std::string const& name) {
         auto status=Text("");p.Children().Append(status);
         v->bindings.push_back([t,status,last=-1](auto const& s,bool force)mutable{auto& c=s.controllers[s.selectedController];t.IsEnabled(s.running&&c.connected);if(force||last!=int(c.audioPassthroughEnabled))t.IsOn(c.audioPassthroughEnabled);last=c.audioPassthroughEnabled;NativeLocalization::SetText(status,hstring(c.audioFailed?L"@WinUI.AudioCaptureCouldNotBeStarted@":L"@WinUI.WindowsUsesTheDefaultAudioOutputAsTheCaptureSource@"));});
         Options(v,name);Telemetry(v);
+    } else if(name=="Profiles") { Profiles(v);
     } else if(name=="Lighting") { LightingOptions(v);
     } else if(name=="Motion & Touch") {
         Options(v,name);auto p=Card(v->right,"@WinUI.ActivationButtons@");
@@ -658,5 +669,190 @@ void FeaturePage::UdpStatus(std::shared_ptr<View> const& v) {
 
 }
 
+namespace winrt::DualsenseZNative::implementation {
+void FeaturePage::Profiles(std::shared_ptr<View> const& v) {
+    // Profiles lays out its own full-width cards instead of the two-column dashboard.
+    v->content.Children().RemoveAt(v->content.Children().Size()-1);
+    auto secondary=[](Panel const& panel,std::string const& text){auto block=Text(text,12);block.Opacity(0.7);panel.Children().Append(block);return block;};
 
+    auto local=Card(v->content,"@WinUI.LocalProfiles@");local.Spacing(12);
+    secondary(local,"@WinUI.LocalProfilesDescription@");
+    Panel current;current.Spacing(2);local.Children().Append(current);
+    secondary(current,"@WinUI.CurrentProfile@");
+    auto profileName=Text("");profileName.FontWeight(Windows::UI::Text::FontWeights::SemiBold());current.Children().Append(profileName);
+    auto profilePath=secondary(current,"");
+    Grid actions;actions.ColumnSpacing(8);actions.RowSpacing(8);local.Children().Append(actions);
+    auto action=[this,&actions](wchar_t const* glyph,std::string const& label,std::function<void(FeaturePage&)> run){
+        auto button=Action(label,std::move(run));
+        Panel content;content.Orientation(Orientation::Horizontal);content.Spacing(8);content.HorizontalAlignment(HorizontalAlignment::Center);
+        FontIcon icon;icon.Glyph(glyph);icon.FontSize(16);content.Children().Append(icon);
+        auto text=Text(label);text.TextWrapping(TextWrapping::NoWrap);text.TextTrimming(TextTrimming::CharacterEllipsis);content.Children().Append(text);
+        button.Content(content);button.HorizontalAlignment(HorizontalAlignment::Stretch);button.Padding(Thickness{12,10,12,10});
+        Automation::AutomationProperties::SetName(button,to_hstring(label));
+        actions.Children().Append(button);return button;
+    };
+    auto load=action(L"\uE8B7","@WinUI.LoadProfile@",[](auto& self){self.PickProfile(0);});
+    auto save=action(L"\uE74E","@WinUI.SaveProfileAs@",[](auto& self){self.PickProfile(1);});
+    auto setDefault=action(L"\uE734","@WinUI.SetAsDefault@",[](auto& self){self.PickProfile(2);});
+    auto removeDefault=action(L"\uE74D","@WinUI.RemoveDefaultProfile@",[](auto& self){if(self.m_host)self.Submit(self.m_host->Core().RemoveDefaultProfile(self.m_selected));});
+    AdaptiveColumns(actions,4,760,380);
+    v->bindings.push_back([profileName,profilePath,load,save,setDefault,removeDefault](auto const& s,bool){
+        auto& c=s.controllers[s.selectedController];
+        NativeLocalization::SetText(profileName,c.profilePath.empty()?std::string("@WinUI.CurrentSettingsNotSaved@"):std::filesystem::path(c.profilePath).stem().string());
+        NativeLocalization::SetText(profilePath,c.profilePath);
+        const auto shown=c.profilePath.empty()?Visibility::Collapsed:Visibility::Visible;if(profilePath.Visibility()!=shown)profilePath.Visibility(shown);
+        for(auto const& button:{load,save,setDefault,removeDefault})if(button.IsEnabled()!=s.running)button.IsEnabled(s.running);
+    });
 
+    auto games=Card(v->content,"@WinUI.GameProfiles@");games.Spacing(12);
+    secondary(games,"@WinUI.GameProfilesDescription@");
+    auto autoSwitch=RowToggle();SettingRow(games,"@WinUI.GameAutoSwitch@",autoSwitch,"@WinUI.GameAutoSwitchDescription@");
+    autoSwitch.Toggled([weak=get_weak()](auto const& sender,auto&&){if(auto self=weak.get();self&&!self->m_updating&&!NativeLocalization::applying&&self->m_host)
+        self->Submit(self->m_host->Core().SetGameAutoSwitch(sender.template as<ToggleSwitch>().IsOn()));});
+    Divider(games);
+    // A shelf of portrait covers, like a game library; the last tile adds a game.
+    VariableSizedWrapGrid shelf;shelf.Orientation(Orientation::Horizontal);shelf.ItemWidth(166);shelf.ItemHeight(258);games.Children().Append(shelf);
+    struct ShelfState {std::shared_ptr<const std::vector<GameProfileEntry>> list;std::string active;bool running=false,built=false;};
+    auto state=std::make_shared<ShelfState>();
+    v->bindings.push_back([weak=get_weak(),shelf,autoSwitch,state](auto const& s,bool){
+        if(autoSwitch.IsOn()!=s.gameAutoSwitch)autoSwitch.IsOn(s.gameAutoSwitch);
+        if(autoSwitch.IsEnabled()!=s.running)autoSwitch.IsEnabled(s.running);
+        // The list is immutable and shared, so comparing the pointer tells whether anything changed.
+        if(state->built&&state->list==s.games&&state->active==s.activeGame&&state->running==s.running)return;
+        auto self=weak.get();if(!self)return;
+        state->built=true;state->list=s.games;state->active=s.activeGame;state->running=s.running;
+        shelf.Children().Clear();
+        for(auto const& game:*s.games) {
+            shelf.Children().Append(self->GameCard(game,game.id==s.activeGame,s.running));
+            if(game.cover.empty()&&self->m_coverAttempts.insert(game.id).second)self->FetchCover(game);
+        }
+        shelf.Children().Append(self->AddGameCard(s.running));
+        NativeLocalization::Invalidate();
+    });
+}
+FrameworkElement FeaturePage::GameCard(GameProfileEntry const& game,bool active,bool enabled) {
+    auto brush=[](wchar_t const* key){return Application::Current().Resources().Lookup(box_value(key)).as<Media::Brush>();};
+    Grid face;
+    // Shown until a cover is found, and behind it if the image cannot be read.
+    Media::LinearGradientBrush gradient;gradient.StartPoint({0,0});gradient.EndPoint({1,1});
+    Media::GradientStop top;top.Color(Windows::UI::Color{255,11,79,192});top.Offset(0);gradient.GradientStops().Append(top);
+    Media::GradientStop bottom;bottom.Color(Windows::UI::Color{255,0,16,46});bottom.Offset(1);gradient.GradientStops().Append(bottom);
+    Border fallback;fallback.Background(gradient);
+    TextBlock title;title.Text(to_hstring(game.name));title.TextWrapping(TextWrapping::Wrap);title.TextAlignment(TextAlignment::Center);title.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+    title.Foreground(Media::SolidColorBrush(Windows::UI::Color{255,255,255,255}));title.VerticalAlignment(VerticalAlignment::Center);title.Margin(Thickness{12,12,12,12});
+    fallback.Child(title);face.Children().Append(fallback);
+    if(!game.cover.empty()) try {
+        std::wstring location=L"file:///"+std::wstring(to_hstring(game.cover));std::replace(location.begin(),location.end(),L'\\',L'/');
+        Media::Imaging::BitmapImage bitmap;bitmap.DecodePixelWidth(300);bitmap.UriSource(Windows::Foundation::Uri(location));
+        Image cover;cover.Source(bitmap);cover.Stretch(Media::Stretch::UniformToFill);cover.HorizontalAlignment(HorizontalAlignment::Center);cover.VerticalAlignment(VerticalAlignment::Center);
+        face.Children().Append(cover);
+    } catch(...) {}
+    if(active) {
+        Border badge;badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));badge.Padding(Thickness{6,2,6,3});badge.Margin(Thickness{8,8,8,8});
+        badge.HorizontalAlignment(HorizontalAlignment::Left);badge.VerticalAlignment(VerticalAlignment::Bottom);badge.Background(brush(L"AccentFillColorDefaultBrush"));
+        auto label=Text("@WinUI.GameActive@",11);label.FontWeight(Windows::UI::Text::FontWeights::SemiBold());label.Foreground(brush(L"TextOnAccentFillColorPrimaryBrush"));
+        badge.Child(label);face.Children().Append(badge);
+    }
+    Border clip;clip.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));clip.Child(face);
+    Controls::Button button;button.Width(150);button.Height(225);button.Padding(Thickness{0,0,0,0});button.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+    button.HorizontalContentAlignment(HorizontalAlignment::Stretch);button.VerticalContentAlignment(VerticalAlignment::Stretch);
+    if(active){button.BorderThickness(Thickness{2,2,2,2});button.BorderBrush(brush(L"AccentFillColorDefaultBrush"));}
+    button.Content(clip);button.IsEnabled(enabled);
+    Automation::AutomationProperties::SetName(button,to_hstring(game.name));ToolTipService::SetToolTip(button,box_value(to_hstring(game.name)));
+    button.Click([weak=get_weak(),id=game.id](auto&&,auto&&){if(auto self=weak.get();self&&self->m_host)self->Submit(self->m_host->Core().ToggleGameProfile(id));});
+    // The menu opens outside the page tree, so its text is translated here.
+    MenuFlyoutItem remove;remove.Text(NativeLocalization::Text(L"@WinUI.RemoveGame@"));FontIcon bin;bin.Glyph(L"\uE74D");remove.Icon(bin);
+    remove.Click([weak=get_weak(),id=game.id](auto&&,auto&&){if(auto self=weak.get();self&&self->m_host)self->Submit(self->m_host->Core().RemoveGameProfile(id));});
+    MenuFlyout menu;menu.Items().Append(remove);button.ContextFlyout(menu);
+    Panel card;card.Spacing(6);card.Width(150);card.HorizontalAlignment(HorizontalAlignment::Left);card.VerticalAlignment(VerticalAlignment::Top);card.Children().Append(button);
+    TextBlock name;name.Text(to_hstring(game.name));name.FontSize(12);name.TextTrimming(TextTrimming::CharacterEllipsis);card.Children().Append(name);
+    return card;
+}
+FrameworkElement FeaturePage::AddGameCard(bool enabled) {
+    Panel content;content.Spacing(8);content.VerticalAlignment(VerticalAlignment::Center);content.HorizontalAlignment(HorizontalAlignment::Center);
+    FontIcon plus;plus.Glyph(L"\uE710");plus.FontSize(28);content.Children().Append(plus);
+    auto label=Text("@WinUI.AddGame@");label.TextAlignment(TextAlignment::Center);content.Children().Append(label);
+    Controls::Button button;button.Width(150);button.Height(225);button.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));button.Content(content);button.IsEnabled(enabled);
+    button.HorizontalAlignment(HorizontalAlignment::Left);button.VerticalAlignment(VerticalAlignment::Top);
+    Automation::AutomationProperties::SetName(button,L"@WinUI.AddGame@");
+    button.Click([weak=get_weak()](auto&&,auto&&){if(auto self=weak.get())self->AddGameDialog();});
+    return button;
+}
+fire_and_forget FeaturePage::PickProfile(int operation) {
+    auto lifetime=get_strong();auto host=m_host;const int controller=m_selected;const HWND window=m_window;
+    if(!host||!window)co_return;
+    try {
+        Windows::Storage::StorageFile file{nullptr};
+        if(operation==1){Windows::Storage::Pickers::FileSavePicker picker;picker.as<IInitializeWithWindow>()->Initialize(window);
+            picker.SuggestedFileName(NativeLocalization::Text(L"@WinUI.ControllerProfile@"));picker.FileTypeChoices().Insert(NativeLocalization::Text(L"@WinUI.DualsenseZProfile@"),single_threaded_vector<hstring>({L".dsy"}));file=co_await picker.PickSaveFileAsync();}
+        else {Windows::Storage::Pickers::FileOpenPicker picker;picker.as<IInitializeWithWindow>()->Initialize(window);picker.FileTypeFilter().Append(L".dsy");file=co_await picker.PickSingleFileAsync();}
+        if(!file||host->Status()!=CoreHost::State::Running)co_return;
+        auto path=to_string(file.Path());ApplicationCore::RequestId id=0;
+        switch(operation){case 0:id=host->Core().LoadProfile(controller,path);break;case 1:id=host->Core().SaveProfile(controller,path);break;
+        case 2:id=host->Core().SetDefaultProfile(controller,path);break;}
+        Submit(id);
+    }catch(hresult_error const& e){if(host->Status()==CoreHost::State::Running){m_notifications.Show(hstring(L"@WinUI.FilePickerFailed@\n")+e.message(),InfoBarSeverity::Error);}}
+}
+// Offers the installed Steam games that have no profile yet; any other game is added through its .exe.
+fire_and_forget FeaturePage::AddGameDialog() {
+    auto lifetime=get_strong();auto host=m_host;const HWND window=m_window;
+    if(!host||!window)co_return;
+    try {
+        std::vector<InstalledGame> installed;
+        const auto existing=host->Core().GetSnapshot()->games;
+        for(auto& game:GameLibrary::InstalledSteamGames())
+            if(std::none_of(existing->begin(),existing->end(),[&](GameProfileEntry const& added){return added.match==game.folder||(added.steamAppId>0&&added.steamAppId==game.steamAppId);}))installed.push_back(std::move(game));
+        // A dialog is outside the page tree, so every string is translated here.
+        ContentDialog dialog;dialog.XamlRoot(XamlRoot());
+        dialog.Style(Application::Current().Resources().Lookup(box_value(L"DefaultContentDialogStyle")).as<Microsoft::UI::Xaml::Style>());
+        dialog.Title(box_value(NativeLocalization::Text(L"@WinUI.AddGame@")));
+        Panel body;body.Spacing(12);body.MinWidth(360);
+        TextBlock description;description.Text(NativeLocalization::Text(installed.empty()?L"@WinUI.NoSteamGames@":L"@WinUI.AddGameDescription@"));description.TextWrapping(TextWrapping::Wrap);body.Children().Append(description);
+        ListView list;list.SelectionMode(ListViewSelectionMode::Single);list.MaxHeight(320);
+        for(auto const& game:installed)list.Items().Append(box_value(to_hstring(game.name)));
+        if(!installed.empty())body.Children().Append(list);
+        dialog.Content(body);
+        dialog.PrimaryButtonText(NativeLocalization::Text(L"@WinUI.AddSelectedGame@"));dialog.SecondaryButtonText(NativeLocalization::Text(L"@WinUI.BrowseForExe@"));
+        dialog.CloseButtonText(NativeLocalization::Text(L"@WinUI.CancelButton@"));dialog.DefaultButton(ContentDialogButton::Primary);dialog.IsPrimaryButtonEnabled(false);
+        list.SelectionChanged([dialog,list](auto&&,auto&&){dialog.IsPrimaryButtonEnabled(list.SelectedIndex()>=0);});
+        const auto result=co_await dialog.ShowAsync();
+        if(host->Status()!=CoreHost::State::Running)co_return;
+        if(result==ContentDialogResult::Primary) {
+            const int index=list.SelectedIndex();
+            if(index>=0&&index<int(installed.size()))Submit(host->Core().AddGameProfile(installed[index].name,installed[index].folder,installed[index].steamAppId));
+        } else if(result==ContentDialogResult::Secondary) {
+            Windows::Storage::Pickers::FileOpenPicker picker;picker.as<IInitializeWithWindow>()->Initialize(window);picker.FileTypeFilter().Append(L".exe");
+            const auto file=co_await picker.PickSingleFileAsync();
+            if(!file||host->Status()!=CoreHost::State::Running)co_return;
+            const auto path=to_string(file.Path());
+            Submit(host->Core().AddGameProfile(GameLibrary::ExecutableName(path),path,0));
+        }
+    }catch(hresult_error const& e){if(host->Status()==CoreHost::State::Running){m_notifications.Show(hstring(L"@WinUI.FilePickerFailed@\n")+e.message(),InfoBarSeverity::Error);}}
+}
+// Downloads the portrait cover Steam publishes for a game. A game that is not from the Steam
+// library is first looked up by name in the Steam store. Failures are silent: the tile keeps its name.
+fire_and_forget FeaturePage::FetchCover(GameProfileEntry game) {
+    const auto host=m_host;
+    if(!host)co_return;
+    try {
+        co_await resume_background();
+        Windows::Web::Http::HttpClient client;
+        client.DefaultRequestHeaders().UserAgent().TryParseAdd(L"DualsenseZ");
+        int appId=game.steamAppId;
+        if(appId<=0) {
+            const auto found=co_await client.GetStringAsync(Windows::Foundation::Uri(L"https://store.steampowered.com/api/storesearch/?l=english&cc=US&term="+Windows::Foundation::Uri::EscapeComponent(to_hstring(game.name))));
+            for(auto const& item:Windows::Data::Json::JsonObject::Parse(found).GetNamedArray(L"items",Windows::Data::Json::JsonArray())) {
+                const auto entry=item.GetObject();
+                if(entry.GetNamedString(L"type",L"")==L"app"){appId=int(entry.GetNamedNumber(L"id",0));break;}
+            }
+            if(appId<=0)co_return;
+        }
+        const auto image=co_await client.GetBufferAsync(Windows::Foundation::Uri(L"https://cdn.cloudflare.steamstatic.com/steam/apps/"+to_hstring(appId)+L"/library_600x900.jpg"));
+        // Only keep what is plausibly a JPEG cover.
+        if(image.Length()<1024||image.Length()>8*1024*1024||image.data()[0]!=0xFF||image.data()[1]!=0xD8)co_return;
+        const auto file=std::filesystem::path(std::wstring(to_hstring(GameLibrary::CoversFolder())))/(std::to_wstring(appId)+L".jpg");
+        {std::ofstream output(file,std::ios::binary|std::ios::trunc);output.write(reinterpret_cast<const char*>(image.data()),image.Length());if(!output)co_return;}
+        host->Core().SetGameCover(game.id,to_string(file.wstring()));
+    } catch(...) {}
+}
+}
